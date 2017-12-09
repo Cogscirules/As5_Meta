@@ -12,7 +12,8 @@ setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm 8")
 
 library(pacman)
 
-p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, ModelMetrics, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs, crqa, dostats, readr)
+p_load(dplyr, lme4, lmerTest, ggplot2, stringr, plyr, caret, modelr, ModelMetrics, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs, crqa, dostats, readr, coda, languageR)
+
 
 
 
@@ -94,11 +95,16 @@ model_mean = lmer(yi ~ 1 + (1|Article), weights = 1/vi, data = pitch_range, cont
 
 summary(model_mean)
 
+
 # Model of SD
+
 
 model_SD = lmer(yi2 ~ 1 + (1|Article), weights = 1/vi2, data = pitch_range, control = lmerControl(check.nobs.vs.nlev = "ignore", check.nobs.vs.nRE = "ignore"))
 
 summary(model_SD)
+
+
+
 
 ```
 
@@ -132,7 +138,7 @@ asm3data = read.csv("final_rqa.csv", header = T)
 #Make a dataframe containing only controls mean + SD and schizo mean + sd
 
 
-resultsDF <- read.csv("final_rqa.csv")
+resultsDF = read.csv("final_rqa.csv")
 
 SampleSizeSchizo = length(unique(asm3data$participant[asm3data$diagnosis == "schizophrenia"]))
 SampleSizeContros = length(unique(asm3data$participant[asm3data$diagnosis == "control"]))
@@ -157,13 +163,15 @@ Pitch_mean_asm3 = escalc("SMD", n1i=SampleSizeSchizo, n2i=SampleSizeContros, m1i
 
 Pitch_sd_asm3 = escalc("SMD", n1i=SampleSizeSchizo, n2i=SampleSizeContros, m1i=PitchSDSchizo, m2i=PitchSDControls, sd1i=PitchSDSchizoSD, sd2i=PitchSDControlsSD, data = asm3)
 
+colnames(Pitch_sd_asm3)[13] = "yi2"
+colnames(Pitch_sd_asm3)[14] = "vi2"
 
 #model mean
 model_mean_asm3 =  lmer(yi ~ 1 + (1 | Article), weights = 1/vi, data=Pitch_mean_asm3, control=lmerControl(check.nobs.vs.nlev="ignore", check.nobs.vs.nRE="ignore"))
 summary(model_mean_asm3)
 
 #model sd
-model_sd_asm3 =  lmer(yi ~ 1 + (1 | Article), weights = 1/vi, data=Pitch_sd_asm3, control=lmerControl(check.nobs.vs.nlev="ignore", check.nobs.vs.nRE="ignore"))
+model_sd_asm3 =  lmer(yi2 ~ 1 + (1 | Article), weights = 1/vi2, data=Pitch_sd_asm3, control=lmerControl(check.nobs.vs.nlev="ignore", check.nobs.vs.nRE="ignore"))
 summary(model_sd_asm3)
 
 #merging
@@ -174,10 +182,10 @@ pitch_range_asm3 = merge(Pitch_mean_asm3, Pitch_sd_asm3)
 #Pitch_mean_asm3 = Pitch_mean_asm3[complete.cases(Pitch_mean_asm3$yi), ]
 
 f1 = rma(yi, vi, data = pitch_range_asm3, slab = Article)
-summary(f1)
+
 
 f2 = rma(yi2, vi2, data = pitch_range_asm3, slab = Article)
-summary(f2)
+
 
 
 
@@ -188,8 +196,33 @@ summary(f2)
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+#mean
+summary(f1)
 forest(f1)
+
+#sd
+summary(f2)
 forest(f2)
+
+
+#testing publication bias
+
+#Influential studie 
+inf = influence(f1)
+print(inf)
+plot(inf)
+
+inf2 = influence(f2)
+print(inf)
+plot(inf)
+
+#funnel plot
+regtest(f1)
+ranktest(f1)
+
+regtest(f2)
+ranktest(f2)
+
 
 
 ```
